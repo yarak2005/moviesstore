@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'petitions',
     'home',
     'movies',
     'accounts',
@@ -58,8 +59,10 @@ ROOT_URLCONF = 'moviesstore.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR,
-                              'moviesstore/templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'moviesstore/templates'),
+            os.path.join(BASE_DIR, 'moviesstore/petitions/templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,12 +83,8 @@ WSGI_APPLICATION = 'moviesstore.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'moviesstore',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

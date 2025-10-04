@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Movie Petitions</h1>
+
+    <div class="card mb-5 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="my-0 font-weight-normal">Suggest a New Movie</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'petition_list' %}">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="form-group mb-3">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+                <button class="btn btn-outline-primary mt-3" type="submit">Submit Petition</button>
+            </form>
+        </div>
+    </div>
+
+    <h2 class="mb-4">Existing Petitions</h2>
+    {% for petition in petitions %}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title text-primary">{{ petition.name }}</h5>
+            <p class="card-text">{{ petition.description }}</p>
+            <p class="card-text mb-2"><small class="text-muted"><strong>Votes:</strong> {{ petition.total_votes }}</small></p>
+            <form method="post" action="{% url 'vote_petition' petition.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">Vote</button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info" role="alert">
+        No petitions yet. Be the first to suggest one!
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
