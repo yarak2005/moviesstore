@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 {% load static %}
+
 <div class="p-3">
   <div class="container">
     <div class="row mt-3">
@@ -8,6 +9,26 @@
         <h2>{{ template_data.movie.name }}</h2>
         <hr />
         <p><b>Description:</b> {{ template_data.movie.description }}</p>
+        
+        <!-- Average Rating Display -->
+        <div class="mb-3">
+          <b>Average Rating:</b> 
+          {% if template_data.average_rating %}
+            <span class="text-warning">
+              {% for i in "12345" %}
+                {% if forloop.counter <= template_data.average_rating %}
+                  ★
+                {% else %}
+                  ☆
+                {% endif %}
+              {% endfor %}
+            </span>
+            <span class="ms-2">{{ template_data.average_rating }}/5 ({{ template_data.rating_count }} rating{{ template_data.rating_count|pluralize }})</span>
+          {% else %}
+            <span class="text-muted">No ratings yet</span>
+          {% endif %}
+        </div>
+        
         <p>
         <b>Price:</b> ${{ template_data.movie.price }}</p>
          <p class="card-text">
@@ -31,6 +52,51 @@
             </div>
           </form>
         </p>
+        
+        <!-- Rating Form -->
+        {% if user.is_authenticated %}
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="my-0 font-weight-normal">Rate this Movie</h5>
+          </div>
+          <div class="card-body">
+            {% if template_data.user_rating %}
+              <p class="text-muted mb-3">Your current rating: 
+                <span class="text-warning">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= template_data.user_rating.stars %}
+                      ★
+                    {% else %}
+                      ☆
+                    {% endif %}
+                  {% endfor %}
+                </span>
+                ({{ template_data.user_rating.stars }}/5)
+              </p>
+            {% endif %}
+            
+            <form method="post" action="{% url 'movies.submit_rating' id=template_data.movie.id %}">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label class="form-label">Select your rating:</label>
+                <div class="star-rating-container">
+                  {% for i in "12345" %}
+                    <input type="radio" class="btn-check star-input" name="stars" id="star{{ forloop.counter }}" value="{{ forloop.counter }}" 
+                           {% if template_data.user_rating and template_data.user_rating.stars == forloop.counter %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary star-label" for="star{{ forloop.counter }}" data-rating="{{ forloop.counter }}">
+                      <span class="star-rating">★</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+              <button type="submit" class="btn btn-warning">
+                {% if template_data.user_rating %}Update Rating{% else %}Submit Rating{% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+        
         <h2>Reviews</h2>
         <hr />
         <ul class="list-group">
@@ -97,4 +163,66 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const starLabels = document.querySelectorAll('.star-label');
+  const starInputs = document.querySelectorAll('.star-input');
+  let selectedRating = 0; // Track the clicked rating
+  
+  // Function to update star display
+  function updateStars(rating) {
+    starLabels.forEach((label, index) => {
+      const starRating = parseInt(label.getAttribute('data-rating'));
+      const starElement = label.querySelector('.star-rating');
+      
+      if (starRating <= rating) {
+        // Yellow background, white star
+        label.style.backgroundColor = '#ffc107';
+        label.style.borderColor = '#ffc107';
+        label.style.color = '#000';
+        starElement.style.color = '#ffffff';
+      } else {
+        // Gray background, black star
+        label.style.backgroundColor = '#6c757d';
+        label.style.borderColor = '#6c757d';
+        label.style.color = '#000';
+        starElement.style.color = '#000000';
+      }
+    });
+  }
+  
+  // Handle star label clicks - makes selection permanent
+  starLabels.forEach((label) => {
+    label.addEventListener('click', function() {
+      const rating = parseInt(this.getAttribute('data-rating'));
+      selectedRating = rating;
+      updateStars(rating);
+    });
+    
+    // Handle hover effects - preview colors
+    label.addEventListener('mouseenter', function() {
+      const rating = parseInt(this.getAttribute('data-rating'));
+      updateStars(rating);
+    });
+  });
+  
+  // Handle mouse leave to reset to selected rating
+  const starContainer = document.querySelector('.star-rating-container');
+  starContainer.addEventListener('mouseleave', function() {
+    updateStars(selectedRating);
+  });
+  
+  // Initialize with user's existing rating or default
+  const checkedInput = document.querySelector('.star-input:checked');
+  if (checkedInput) {
+    const rating = parseInt(checkedInput.value);
+    selectedRating = rating;
+    updateStars(rating);
+  } else {
+    updateStars(0);
+  }
+});
+</script>
+
 {% endblock content %}
