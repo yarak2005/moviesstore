@@ -26,6 +26,7 @@ urlpatterns = [
     path('cart/', include('cart.urls')),
     path('', include('home.urls')),
     path('petitions/', include('petitions.urls')),
+    path('insights/', include('insights.urls')),
 ]
 
 if settings.DEBUG:

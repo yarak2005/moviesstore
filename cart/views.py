@@ -3,6 +3,7 @@ from django.shortcuts import render
 # Create your views here.
 from django.shortcuts import get_object_or_404, redirect
 from movies.models import Movie
+from insights.models import Region
 
 from .utils import calculate_cart_total
 from .models import Order, Item
@@ -15,10 +16,13 @@ def index(request):
     if (movie_ids != []):
         movies_in_cart = Movie.objects.filter(id__in=movie_ids)
         cart_total = calculate_cart_total(cart, movies_in_cart)
+    regions = Region.objects.all()
     template_data = {}
     template_data['title'] = 'Cart'
     template_data['movies_in_cart'] = movies_in_cart
+    template_data['cart'] = cart
     template_data['cart_total'] = cart_total
+    template_data['regions'] = regions
     return render(request, 'cart/index.html', {'template_data': template_data})
 
 def add(request, id):
@@ -41,9 +45,15 @@ def purchase(request):
         return redirect('cart.index')
     movies_in_cart = Movie.objects.filter(id__in=movie_ids)
     cart_total = calculate_cart_total(cart, movies_in_cart)
+    
+    # Get region from POST
+    region_id = request.POST.get('region_id')
+    region = get_object_or_404(Region, id=region_id)
+    
     order = Order()
     order.user = request.user
     order.total = cart_total
+    order.region = region
     order.save()
     for movie in movies_in_cart:
         item = Item()

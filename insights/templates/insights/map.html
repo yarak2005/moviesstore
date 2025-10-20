@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3 class="card-title mb-3">Local Popularity Map</h3>
+          <div id="map" style="height: 500px; border-radius: 8px; overflow: hidden;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card shadow bg-dark text-white">
+        <div class="card-body">
+          <h4 class="card-title" id="regionTitle">Select a region</h4>
+          <p class="text-muted">Click on a marker to see trending movies in that area</p>
+          <hr class="bg-secondary">
+          <ul class="list-group list-group-flush" id="topList">
+            <li class="list-group-item bg-dark text-white-50">No region selected</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+      crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize map centered on US
+  const map = L.map('map').setView([39.5, -98.35], 4);
+  
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  // Fetch regions and add markers
+  fetch("{% url 'insights.regions' %}", {credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(({regions}) => {
+      if (regions.length === 0) {
+        document.getElementById('topList').innerHTML = 
+          '<li class="list-group-item bg-dark text-warning">No regions available. Add regions in the admin panel.</li>';
+        return;
+      }
+      
+      regions.forEach(r => {
+        const marker = L.marker([parseFloat(r.lat), parseFloat(r.lng)]).addTo(map);
+        marker.bindPopup(`<strong>${r.name}</strong><br>Click to see trending movies`);
+        marker.on('click', () => loadTop(r.id, r.name));
+      });
+      
+      // Auto-fit map to show all markers
+      if (regions.length > 0) {
+        const bounds = L.latLngBounds(regions.map(r => [parseFloat(r.lat), parseFloat(r.lng)]));
+        map.fitBounds(bounds, {padding: [50, 50]});
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching regions:', error);
+      document.getElementById('topList').innerHTML = 
+        '<li class="list-group-item bg-dark text-danger">Error loading regions</li>';
+    });
+
+  function loadTop(id, name) {
+    document.getElementById('regionTitle').innerText = name;
+    const ul = document.getElementById('topList');
+    ul.innerHTML = '<li class="list-group-item bg-dark text-white-50">Loading…</li>';
+    
+    fetch(`{% url 'insights.region_top' id=0 %}`.replace('/0/', `/${id}/`), {credentials: 'same-origin'})
+      .then(r => r.json())
+      .then(({top}) => {
+        ul.innerHTML = '';
+        if (!top || top.length === 0) {
+          ul.innerHTML = '<li class="list-group-item bg-dark text-white-50">No purchases yet in this region.</li>';
+          return;
+        }
+        top.forEach(row => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item bg-dark text-white d-flex justify-content-between align-items-center';
+          li.innerHTML = `<span>${row.title}</span><span class="badge bg-primary rounded-pill">${row.count}</span>`;
+          ul.appendChild(li);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching top movies:', error);
+        ul.innerHTML = '<li class="list-group-item bg-dark text-danger">Error loading data</li>';
+      });
+  }
+});
+</script>
+
+<style>
+  .leaflet-popup-content {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  #topList {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  #topList::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  #topList::-webkit-scrollbar-track {
+    background: #2E2E2E;
+  }
+  
+  #topList::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 4px;
+  }
+</style>
+{% endblock content %}
+
